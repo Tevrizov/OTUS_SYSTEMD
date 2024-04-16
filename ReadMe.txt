@@ -111,9 +111,28 @@ root@tep:/opt#
     root@tep:/etc/systemd/system# 
 
 
+root@tep:~# systemctl list-timers
+NEXT                        LEFT        LAST                        PASSED        UNIT                         ACTIVATES                     
+Tue 2024-04-16 12:42:02 UTC 8s left     Tue 2024-04-16 12:41:32 UTC 21s ago       watchlog.daemon.timer        watchlog.daemon.service       
+Tue 2024-04-16 18:45:59 UTC 6h left     Tue 2024-04-16 11:26:41 UTC 1h 15min ago  motd-news.timer              motd-news.service             
+Tue 2024-04-16 23:59:55 UTC 11h left    Tue 2024-04-16 11:26:41 UTC 1h 15min ago  apt-daily.timer              apt-daily.service             
+Wed 2024-04-17 00:00:00 UTC 11h left    Tue 2024-04-16 07:55:56 UTC 4h 45min ago  logrotate.timer              logrotate.service             
+Wed 2024-04-17 00:00:00 UTC 11h left    Tue 2024-04-16 07:55:56 UTC 4h 45min ago  man-db.timer                 man-db.service                
+Wed 2024-04-17 04:15:05 UTC 15h left    Tue 2024-04-16 11:26:41 UTC 1h 15min ago  fwupd-refresh.timer          fwupd-refresh.service         
+Wed 2024-04-17 06:56:36 UTC 18h left    Tue 2024-04-16 08:07:50 UTC 4h 34min ago  apt-daily-upgrade.timer      apt-daily-upgrade.service     
+Wed 2024-04-17 09:27:13 UTC 20h left    Tue 2024-04-16 08:11:31 UTC 4h 30min ago  systemd-tmpfiles-clean.timer systemd-tmpfiles-clean.service
+Sun 2024-04-21 03:10:36 UTC 4 days left Sun 2024-04-14 15:20:45 UTC 1 day 21h ago e2scrub_all.timer            e2scrub_all.service           
+Mon 2024-04-22 00:00:00 UTC 5 days left Mon 2024-04-15 05:06:11 UTC 1 day 7h ago  fstrim.timer                 fstrim.service                
+
+10 timers listed.
+Pass --all to see loaded but inactive timers, too.
+root@tep:~# 
+
+
 ################################################################################################################################################3
 
 2.Установить spawn-fcgi и переписать init-скрипт на unit-файл (имя service должно называться так же: spawn-fcgi).
+
 
 
 
