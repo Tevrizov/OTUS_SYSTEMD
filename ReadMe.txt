@@ -10,9 +10,26 @@
 
 3.Дополнить unit-файл httpd (он же apache2) возможностью запустить несколько инстансов сервера с разными конфигурационными файлами.
 
+
+Если описать systemd в общих чертах, то это система управления юнитами. 
+Юнитами могут быть много вещей. Одним из наиболее важных типов юнитов является сервис.
+Как правило, сервисы - это процессы, которые предоставляют определенные функциональные возможности и позволяют подключаться внешним клиентам.
+Помимо сервисов, существуют другие типы юнитов, такие как сокеты, монтирование и другие.
+
+Чтобы отобразить список всех доступных юнитов, введите systemctl -t help
+
+Основное преимущество работы с systemd по сравнению с предыдущими методами, используемыми для управления сервисами, 
+заключается в том, что он обеспечивает единый интерфейс для запуска юнитов. Этот интерфейс определен в файле юнита.
+
+Сокет создает метод для приложений, чтобы общаться друг с другом. Некоторые сервисы создают свои собственные сокеты при запуске, 
+в то время как другим сервисам нужен файл-юнит сокетов для создания сокетов для них. И наоборот: каждому сокету нужен соответствующий служебный файл.
+
+
 ##################################################################################################################################
 1.Написать service, который будет раз в 30 секунд мониторить лог на предмет наличия ключевого слова 
 
+
+Исрользую тестовую ВМ на базе Ubuntu 20.04.6 LTS
 
 1. Создаём файл с конфигурацией для сервиса в директории /etc/sysconfig - из неё сервис будет брать необходимые переменные.
     root@tep:/etc/systemd# cat watchlog.conf 
@@ -133,6 +150,169 @@ root@tep:~#
 
 2.Установить spawn-fcgi и переписать init-скрипт на unit-файл (имя service должно называться так же: spawn-fcgi).
 
+Исрользую тестовую ВМ на базе CentOS-Stream-8
+
+1.Устанавливаем spawn-fcgi и необходимые для него пакеты:
+    [root@localhost ~]# yum install epel-release -y && yum install spawn-fcgi php php-cli
+
+
+2. Приводим файл /etc/sysconfig/spawn-fcgi к следующему виду
+
+    [root@localhost ~]# cat /etc/sysconfig/spawn-fcgi
+    # You must set some working options before the "spawn-fcgi" service will work.
+    # If SOCKET points to a file, then this file is cleaned up by the init script.
+    #
+    # See spawn-fcgi(1) for all possible options.
+    #
+    # Example :
+    SOCKET=/var/run/php-fcgi.sock
+    OPTIONS="-u apache -g apache -s $SOCKET -S -M 0600 -C 32 -F 1 -P /var/run/spawn-fcgi.pid -- /usr/bin/php-cgi"
+
+    [root@localhost ~]#
+
+
+3. Приводим файл /etc/systemd/system/spawn-fcgi.service к следующему виду
+
+    [root@localhost ~]#  cat /etc/systemd/system/spawn-fcgi.service
+    [Unit]
+    Description=Spawn-fcgi startup service by Otus
+    After=network.target
+
+    [Service]
+    Type=simple
+    PIDFile=/var/run/spawn-fcgi.pid
+    EnvironmentFile=/etc/sysconfig/spawn-fcgi
+    ExecStart=/usr/bin/spawn-fcgi -n $OPTIONS
+    KillMode=process
+
+    [Install]
+    WantedBy=multi-user.target
+    [root@localhost ~]#
+
+4. Проверяю
+[root@localhost ~]# systemctl status spawn-fcgi
+● spawn-fcgi.service - Spawn-fcgi startup service by Otus
+   Loaded: loaded (/etc/systemd/system/spawn-fcgi.service; disabled; vendor preset: disabled)
+   Active: active (running) since Wed 2024-04-17 11:07:53 EDT; 14min ago
+ Main PID: 27063 (php-cgi)
+    Tasks: 33 (limit: 4678)
+   Memory: 29.8M
+   CGroup: /system.slice/spawn-fcgi.service
+           ├─27063 /usr/bin/php-cgi
+           ├─27064 /usr/bin/php-cgi
+           ├─27065 /usr/bin/php-cgi
+           ├─27066 /usr/bin/php-cgi
+           ├─27067 /usr/bin/php-cgi
+           ├─27068 /usr/bin/php-cgi
+           ├─27069 /usr/bin/php-cgi
+           ├─27070 /usr/bin/php-cgi
+           ├─27071 /usr/bin/php-cgi
+           ├─27072 /usr/bin/php-cgi
+           ├─27073 /usr/bin/php-cgi
+           ├─27074 /usr/bin/php-cgi
+           ├─27075 /usr/bin/php-cgi
+           ├─27076 /usr/bin/php-cgi
+           ├─27077 /usr/bin/php-cgi
+           ├─27078 /usr/bin/php-cgi
+           ├─27079 /usr/bin/php-cgi
+           ├─27080 /usr/bin/php-cgi
+           ├─27081 /usr/bin/php-cgi
+           ├─27082 /usr/bin/php-cgi
+           ├─27083 /usr/bin/php-cgi
+           ├─27084 /usr/bin/php-cgi
+           ├─27085 /usr/bin/php-cgi
+           ├─27086 /usr/bin/php-cgi
+           ├─27087 /usr/bin/php-cgi
+           ├─27088 /usr/bin/php-cgi
+           ├─27089 /usr/bin/php-cgi
+           ├─27090 /usr/bin/php-cgi
+           ├─27091 /usr/bin/php-cgi
+           ├─27092 /usr/bin/php-cgi
+           ├─27093 /usr/bin/php-cgi
+           ├─27094 /usr/bin/php-cgi
+           └─27095 /usr/bin/php-cgi
+
+апр 17 11:07:53 localhost.localdomain systemd[1]: Started Spawn-fcgi startup service by Otus.
+[root@localhost ~]#
+
+
+
+
+###############################################################################################################################################
+
+Дополнить юнит-файл apache httpd возможностью запустить несколько инстансов сервера с разными конфигами
+
+1. Создаю два файла в /etc/sysconfig/
+    touch httpd-first && touch httpd-second
+
+2. Привожу эти два файла к виду:
+    [root@localhost sysconfig]# cat httpd-first
+    OPTIONS=-f conf/first.conf
+    [root@localhost sysconfig]# cat httpd-second
+    OPTIONS=-f conf/second.conf
+    [root@localhost sysconfig]#
+
+3. Создаю два файла конфигурационными в /etc/httpd/conf
+    cat httpd.conf >  first.conf
+    cat httpd.conf >  second.conf
+
+4. Правлю second.conf
+    Listen 8080
+    в конец конфига добавляю PidFile /var/run/httpd-second.pid
+
+
+5. Запускаю
+
+[root@localhost ~]# systemctl status httpd@second
+● httpd@second.service - The Apache HTTP Server
+   Loaded: loaded (/usr/lib/systemd/system/httpd@.service; disabled; vendor preset: disabled)
+   Active: active (running) since Wed 2024-04-17 11:38:31 EDT; 1min 1s ago
+     Docs: man:httpd@.service(8)
+  Process: 27485 ExecStartPre=/bin/chown root.apache /run/httpd/instance-second (code=exited, status=0/SUCCESS)
+  Process: 27483 ExecStartPre=/bin/mkdir -m 710 -p /run/httpd/instance-second (code=exited, status=0/SUCCESS)
+ Main PID: 27487 (httpd)
+   Status: "Running, listening on: port 8080"
+    Tasks: 213 (limit: 4678)
+   Memory: 25.1M
+   CGroup: /system.slice/system-httpd.slice/httpd@second.service
+           ├─27487 /usr/sbin/httpd -DFOREGROUND -f conf/second.conf
+           ├─27488 /usr/sbin/httpd -DFOREGROUND -f conf/second.conf
+           ├─27489 /usr/sbin/httpd -DFOREGROUND -f conf/second.conf
+           ├─27490 /usr/sbin/httpd -DFOREGROUND -f conf/second.conf
+           └─27491 /usr/sbin/httpd -DFOREGROUND -f conf/second.conf
+
+апр 17 11:38:30 localhost.localdomain systemd[1]: Starting The Apache HTTP Server...
+апр 17 11:38:31 localhost.localdomain httpd[27487]: AH00558: httpd: Could not reliably determine the server's fully qualified domain name, using localhost.localdomain. Set the 'ServerName' dir>
+апр 17 11:38:31 localhost.localdomain systemd[1]: Started The Apache HTTP Server.
+апр 17 11:38:31 localhost.localdomain httpd[27487]: Server configured, listening on: port 8080
+lines 1-21/21 (END)
+
+[root@localhost ~]# systemctl status httpd@firs
+● httpd@firs.service - The Apache HTTP Server
+   Loaded: loaded (/usr/lib/systemd/system/httpd@.service; disabled; vendor preset: disabled)
+   Active: active (running) since Wed 2024-04-17 11:38:01 EDT; 1min 59s ago
+     Docs: man:httpd@.service(8)
+  Process: 27250 ExecStartPre=/bin/chown root.apache /run/httpd/instance-firs (code=exited, status=0/SUCCESS)
+  Process: 27248 ExecStartPre=/bin/mkdir -m 710 -p /run/httpd/instance-firs (code=exited, status=0/SUCCESS)
+ Main PID: 27251 (httpd)
+   Status: "Running, listening on: port 80"
+    Tasks: 213 (limit: 4678)
+   Memory: 40.4M
+   CGroup: /system.slice/system-httpd.slice/httpd@firs.service
+           ├─27251 /usr/sbin/httpd -DFOREGROUND -f conf/firs.conf
+           ├─27253 /usr/sbin/httpd -DFOREGROUND -f conf/firs.conf
+           ├─27254 /usr/sbin/httpd -DFOREGROUND -f conf/firs.conf
+           ├─27255 /usr/sbin/httpd -DFOREGROUND -f conf/firs.conf
+           └─27256 /usr/sbin/httpd -DFOREGROUND -f conf/firs.conf
+
+апр 17 11:38:01 localhost.localdomain systemd[1]: Starting The Apache HTTP Server...
+апр 17 11:38:01 localhost.localdomain httpd[27251]: AH00558: httpd: Could not reliably determine the server's fully qualified domain name, using localhost.localdomain. Set the 'ServerName' dir>
+апр 17 11:38:01 localhost.localdomain systemd[1]: Started The Apache HTTP Server.
+апр 17 11:38:01 localhost.localdomain httpd[27251]: Server configured, listening on: port 80
+
+
+
+############################################################################################################################################################
 
 
 
